@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "jca.quick-system-info",
+  "name": "Quick System Info",
+  "version": "1.0.0",
+  "author": "Osvaldo Cobacho Aguilera",
+  "description": "Quick system specs, temperatures, and network status",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Quick System Info",
+    "description": "Quick system specs, temperatures, and network status",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
