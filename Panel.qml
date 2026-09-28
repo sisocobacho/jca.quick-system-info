@@ -15,9 +15,8 @@ Panel {
   readonly property string labelText: status.label || " --"
   readonly property string temperatureText: status.temperature_text || "—"
   readonly property string thermalStatus: String(status.thermal_status || "Unknown").toUpperCase()
-  readonly property string cpuValue: status.cpu_name
-    ? status.cpu_name + " · " + (status.cpu || "—")
-    : (status.cpu || "—")
+  readonly property string cpuNameValue: status.cpu_name || "—"
+  readonly property string cpuFrequencyValue: status.cpu || "—"
   readonly property string memoryValue: (status.memory_used && status.memory_total)
     ? status.memory_used + " / " + status.memory_total
     : "—"
@@ -202,7 +201,8 @@ Panel {
           Column {
             width: (parent.width - parent.spacing) / 2
             spacing: Style.space(10)
-            InfoPair { label: "CPU"; value: root.cpuValue }
+            InfoPair { label: "CPU"; value: root.cpuNameValue }
+            InfoPair { label: "CPU freq"; value: root.cpuFrequencyValue }
             InfoPair { label: "Memory"; value: root.memoryValue }
             InfoPair { label: "Disk"; value: root.diskValue }
             InfoPair { label: "Uptime"; value: root.status.uptime || "—" }
