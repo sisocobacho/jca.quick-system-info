@@ -15,11 +15,13 @@ Panel {
   readonly property string labelText: status.label || " --"
   readonly property string temperatureText: status.temperature_text || "—"
   readonly property string thermalStatus: String(status.thermal_status || "Unknown").toUpperCase()
+  readonly property string deviceValue: status.device || status.host || "—"
   readonly property string cpuNameValue: status.cpu_name || "—"
   readonly property string cpuFrequencyValue: status.cpu || "—"
   readonly property string memoryValue: (status.memory_used && status.memory_total)
     ? status.memory_used + " / " + status.memory_total
     : "—"
+  readonly property string ramTypeValue: status.ram_type || "—"
   readonly property string diskValue: (status.disk_used && status.disk_total)
     ? status.disk_used + " / " + status.disk_total
     : "—"
@@ -107,7 +109,7 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: panel.fittedContentWidth(Style.space(520))
+    contentWidth: panel.fittedContentWidth(Style.space(620))
     contentHeight: panel.fittedContentHeight(column.implicitHeight)
 
     PanelKeyCatcher {
@@ -129,48 +131,26 @@ Panel {
 
         Item {
           width: parent.width
-          implicitHeight: Math.max(heroLeft.implicitHeight, heroMeta.implicitHeight)
-
-          Row {
-            id: heroLeft
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.space(14)
-
-            Text {
-              text: "󰌢"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: 42
-              anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-              id: heroTemp
-              text: root.temperatureText
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.displayLarge
-              font.bold: true
-              anchors.verticalCenter: parent.verticalCenter
-            }
-          }
+          implicitHeight: Math.max(heroLeft.implicitHeight, heroStatus.implicitHeight)
 
           Column {
-            id: heroMeta
+            id: heroStatus
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.space(6)
 
             Text {
-              text: "System"
+              text: root.temperatureText
               color: root.contentForeground
               font.family: root.contentFontFamily
-              font.pixelSize: Style.font.title
+              font.pixelSize: Style.font.displayLarge
               font.bold: true
+              horizontalAlignment: Text.AlignRight
+              anchors.right: parent.right
             }
 
             Row {
+              anchors.right: parent.right
               spacing: Style.space(8)
 
               Rectangle {
@@ -192,29 +172,72 @@ Panel {
               }
             }
           }
+
+          Row {
+            id: heroLeft
+            anchors.left: parent.left
+            anchors.right: heroStatus.left
+            anchors.rightMargin: Style.space(24)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(14)
+
+            Text {
+              text: "󰌢"
+              color: root.contentForeground
+              font.family: root.contentFontFamily
+              font.pixelSize: 42
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+              text: root.deviceValue
+              width: Math.max(0, parent.width - parent.children[0].implicitWidth - parent.spacing)
+              color: root.contentForeground
+              font.family: root.contentFontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              wrapMode: Text.WordWrap
+              maximumLineCount: 2
+              elide: Text.ElideRight
+              verticalAlignment: Text.AlignVCenter
+              anchors.verticalCenter: parent.verticalCenter
+            }
+          }
         }
 
-        Row {
+        Column {
           width: parent.width
-          spacing: Style.space(40)
+          spacing: Style.space(10)
 
-          Column {
-            width: (parent.width - parent.spacing) / 2
-            spacing: Style.space(10)
-            InfoPair { label: "CPU"; value: root.cpuNameValue }
-            InfoPair { label: "CPU freq"; value: root.cpuFrequencyValue }
-            InfoPair { label: "Memory"; value: root.memoryValue }
-            InfoPair { label: "Disk"; value: root.diskValue }
-            InfoPair { label: "Uptime"; value: root.status.uptime || "—" }
+          DualInfoRow {
+            leftLabel: "CPU"
+            leftValue: root.cpuNameValue
+            rightLabel: "CPU freq"
+            rightValue: root.cpuFrequencyValue
           }
-
-          Column {
-            width: (parent.width - parent.spacing) / 2
-            spacing: Style.space(10)
-            InfoPair { label: "GPU"; value: root.status.gpu || "—" }
-            InfoPair { label: "GPU temp"; value: root.gpuTempValue }
-            InfoPair { label: "Disk temp"; value: root.diskTempValue }
-            InfoPair { label: "Network"; value: root.status.network || "—" }
+          DualInfoRow {
+            leftLabel: "Memory"
+            leftValue: root.memoryValue
+            rightLabel: "RAM type"
+            rightValue: root.ramTypeValue
+          }
+          DualInfoRow {
+            leftLabel: "GPU"
+            leftValue: root.status.gpu || "—"
+            rightLabel: "GPU temp"
+            rightValue: root.gpuTempValue
+          }
+          DualInfoRow {
+            leftLabel: "Disk"
+            leftValue: root.diskValue
+            rightLabel: "Disk temp"
+            rightValue: root.diskTempValue
+          }
+          DualInfoRow {
+            leftLabel: "Network"
+            leftValue: root.status.network || "—"
+            rightLabel: "IP address"
+            rightValue: root.status.ip_address || "—"
           }
         }
 
@@ -226,10 +249,10 @@ Panel {
           width: parent.width
           spacing: Style.space(8)
 
-          InfoPair { label: "Host"; value: root.status.host || "—" }
-          InfoPair { label: "IP address"; value: root.status.ip_address || "—" }
+          InfoPair { label: "Distribution"; value: root.status.distribution || "—" }
           InfoPair { label: "Kernel"; value: root.status.kernel || "—" }
           InfoPair { label: "Filesystem"; value: root.status.filesystem || "—" }
+          InfoPair { label: "Uptime"; value: root.status.uptime || "—" }
 
           Text {
             visible: root.errorText !== ""
@@ -243,11 +266,45 @@ Panel {
     }
   }
 
+  component DualInfoRow: Row {
+    property string leftLabel: ""
+    property string leftValue: ""
+    property string rightLabel: ""
+    property string rightValue: ""
+
+    width: parent.width
+    spacing: Style.space(24)
+
+    Item {
+      width: (parent.width - parent.spacing) / 2
+      implicitHeight: leftPair.implicitHeight
+
+      InfoPair {
+        id: leftPair
+        width: parent.width
+        label: parent.parent.leftLabel
+        value: parent.parent.leftValue
+      }
+    }
+
+    Item {
+      width: (parent.width - parent.spacing) / 2
+      implicitHeight: rightPair.implicitHeight
+
+      InfoPair {
+        id: rightPair
+        width: parent.width
+        label: parent.parent.rightLabel
+        value: parent.parent.rightValue
+      }
+    }
+  }
+
   component InfoPair: Row {
     property string label: ""
     property string value: ""
 
-    width: parent.width
+    width: parent ? parent.width : 0
     spacing: Style.space(8)
 
     InfoLabel { text: label }

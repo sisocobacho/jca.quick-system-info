@@ -9,7 +9,7 @@ from pathlib import Path
 
 HOME = Path.home()
 CACHE_DIR = HOME / ".cache" / "omarchy-system-widget"
-STATIC_CACHE = CACHE_DIR / "static.json"
+STATIC_CACHE = CACHE_DIR / "static-v3.json"
 NETWORK_CACHE = CACHE_DIR / "network.json"
 STATIC_TTL = 86400
 NETWORK_TTL = 15
@@ -236,6 +236,39 @@ def root_filesystem():
     return ""
 
 
+def distribution_name():
+    values = {}
+    for line in read_text("/etc/os-release").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip().strip('"')
+    return values.get("PRETTY_NAME") or values.get("NAME") or ""
+
+
+def short_brand(value):
+    value = compact_name(value)
+    if not value:
+        return ""
+
+    mappings = {
+        "ASUSTEK": "ASUS",
+        "ASUSTEK COMPUTER": "ASUS",
+        "ASUSTEK COMPUTER INC.": "ASUS",
+        "HEWLETT-PACKARD": "HP",
+        "MICRO-STAR": "MSI",
+        "MICRO-STAR INTERNATIONAL": "MSI",
+        "LENOVO": "Lenovo",
+    }
+
+    mapped = mappings.get(value.upper())
+    if mapped:
+        return mapped
+
+    first = value.split()[0]
+    return mappings.get(first.upper(), first)
+
+
 def host_name():
     for path in [
         "/sys/devices/virtual/dmi/id/product_name",
@@ -245,6 +278,54 @@ def host_name():
         if value:
             return value
     return compact_name(os.uname().nodename)
+
+
+def device_name():
+    vendor = ""
+    for path in [
+        "/sys/devices/virtual/dmi/id/sys_vendor",
+        "/sys/class/dmi/id/sys_vendor",
+    ]:
+        vendor = short_brand(read_text(path))
+        if vendor:
+            break
+
+    product = host_name()
+    if vendor and product:
+        if product.lower().startswith(vendor.lower()):
+            return product
+        return f"{vendor} {product}"
+    return product or vendor or compact_name(os.uname().nodename)
+
+
+def clean_output(text):
+    text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text or "")
+    text = re.sub(r"\x03\d{0,2}", "", text)
+    return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", text)
+
+
+def ram_type():
+    output = clean_output(run_text(["inxi", "-mxx"], timeout=3.0))
+    if not output:
+        return ""
+
+    types = []
+    for line in output.splitlines():
+        if "Device-" not in line or "type" not in line:
+            continue
+        match = re.search(r"\btype\s+(.+?)(?:\s+(?:size|speed|configured|clock|volts|manufacturer|part-no)\b|$)", line)
+        if not match:
+            continue
+        value = compact_name(match.group(1))
+        lowered = value.lower()
+        if not value or "no module installed" in lowered or lowered in {"unknown", "none"}:
+            continue
+        if value not in types:
+            types.append(value)
+
+    if not types:
+        return ""
+    return types[0] if len(types) == 1 else " / ".join(types)
 
 
 def cpu_name():
@@ -386,11 +467,14 @@ def static_info():
         return cached
 
     result = {
+        "device": device_name(),
         "host": host_name(),
+        "distribution": distribution_name(),
         "kernel": os.uname().release,
         "cpu_name": cpu_name(),
         "cpu_max": fmt_ghz(max_cpu_mhz()),
         "gpu": gpu_name(),
+        "ram_type": ram_type(),
         "filesystem": root_filesystem(),
     }
     write_json_cache(STATIC_CACHE, result)
@@ -421,7 +505,9 @@ def main():
         "temperature_source": cpu_sensor["label"] if cpu_sensor else "No sensor",
         "thermal_status": thermal_status(cpu_temp, crit),
         "thermal_fraction": round(min(max((cpu_temp or 0) / float(crit or 100), 0.0), 1.0), 3),
+        "device": static.get("device") or static.get("host") or "—",
         "host": static.get("host") or "—",
+        "distribution": static.get("distribution") or "—",
         "kernel": static.get("kernel") or os.uname().release,
         "cpu_name": static.get("cpu_name") or "Unknown CPU",
         "cpu": ((cpu_current + " / " + cpu_max) if cpu_current and cpu_max else (cpu_current or cpu_max or "—")),
@@ -431,6 +517,7 @@ def main():
         "memory_used": fmt_bytes(memory_used),
         "memory_total": fmt_bytes(memory_total),
         "memory_percent": round((memory_used / memory_total) * 100) if memory_total else 0,
+        "ram_type": static.get("ram_type") or "—",
         "disk_used": fmt_bytes(disk_used),
         "disk_total": fmt_bytes(disk_total),
         "disk_percent": round((disk_used / disk_total) * 100) if disk_total else 0,
@@ -440,7 +527,7 @@ def main():
         "ip_address": network.get("ip_address") or "—",
     }
     result["summary"] = (
-        f"{result['host']} • {result['temperature_text']} {result['thermal_status'].lower()} • "
+        f"{result['device']} • {result['temperature_text']} {result['thermal_status'].lower()} • "
         f"CPU {result['cpu']} • "
         f"RAM {result['memory_used']} / {result['memory_total']} • "
         f"Disk {result['disk_used']} / {result['disk_total']} • "

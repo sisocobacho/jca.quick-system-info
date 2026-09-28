@@ -8,14 +8,13 @@ Quick System Info is an Omarchy bar widget that adds a compact temperature pill 
 
 - Bar pill with current CPU package temperature
 - Popup panel with:
+  - device brand and model in the header
   - CPU model and current/max frequency
-  - memory usage
+  - memory usage and RAM type
   - disk usage
   - GPU name and temperature when available
-  - uptime
-  - network label
-  - IP address
-  - host, kernel, and filesystem
+  - network label and IP address
+  - distribution, kernel, filesystem, and uptime
 - Left click opens the panel
 - Middle click refreshes data
 - Right click opens `btop`
@@ -43,6 +42,18 @@ omarchy plugin enable jca.quick-system-info
 omarchy plugin update jca.quick-system-info --yes
 ```
 
+### Upgrading from older versions
+
+If you already have the plugin installed, the command above is the normal way to upgrade.
+
+If the update completes but the interface still looks unchanged, force a shell restart and reopen the widget:
+
+```bash
+omarchy restart shell
+```
+
+If you have local edits in `~/.config/omarchy/plugins/jca.quick-system-info`, `omarchy plugin update` may refuse to update until those changes are committed, stashed, or removed.
+
 ## Remove
 
 ```bash
@@ -64,6 +75,7 @@ The plugin expects these tools to be available:
 - `iproute2` (`ip`)
 - `NetworkManager` (`nmcli`) for Wi-Fi SSID detection
 - `pciutils` (`lspci`) for GPU name detection
+- `inxi` for RAM type detection
 - `btop` for right-click launch
 
 The widget degrades gracefully if some data sources are missing.
@@ -73,6 +85,7 @@ The widget degrades gracefully if some data sources are missing.
 - Static hardware information is cached for 24 hours.
 - Network information is cached for 15 seconds.
 - GPU and disk temperatures depend on available sensors on the host machine.
+- RAM type depends on `inxi` and the system firmware exposing memory information.
 - The plugin uses only local system commands and local files. It does not make network requests.
 - Review the code before enabling, as Omarchy plugins run as local unsandboxed code inside `omarchy-shell`.
 
