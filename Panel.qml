@@ -139,14 +139,28 @@ Panel {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Style.space(6)
 
-            Text {
-              text: root.temperatureText
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.displayLarge
-              font.bold: true
-              horizontalAlignment: Text.AlignRight
+            Row {
               anchors.right: parent.right
+              spacing: Style.space(8)
+
+              Text {
+                text: ""
+                color: root.contentForeground
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.displayLarge
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Text {
+                text: root.temperatureText
+                color: root.contentForeground
+                font.family: root.contentFontFamily
+                font.pixelSize: Style.font.displayLarge
+                font.bold: true
+                horizontalAlignment: Text.AlignRight
+                anchors.verticalCenter: parent.verticalCenter
+              }
             }
 
             Row {
