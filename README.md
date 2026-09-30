@@ -15,6 +15,8 @@ Quick System Info is an Omarchy bar widget that adds a compact temperature pill 
   - GPU name and temperature when available
   - network label and IP address
   - distribution, kernel, filesystem, and uptime
+  - quick copy actions for static hardware/system fields
+  - click the top-left header area to copy all shown information
 - Left click opens the panel
 - Middle click refreshes data
 - Right click opens `btop`
@@ -65,6 +67,8 @@ omarchy plugin remove jca.quick-system-info
 - Left click: open panel
 - Middle click: refresh
 - Right click: open `btop`
+- Click selected fields in the popup to copy their value
+- Hover and click the top-left header area to copy all shown information
 
 ## Requirements
 
@@ -77,6 +81,7 @@ The plugin expects these tools to be available:
 - `pciutils` (`lspci`) for GPU name detection
 - `inxi` for RAM type detection
 - `btop` for right-click launch
+- `wl-copy` for popup copy actions
 
 The widget degrades gracefully if some data sources are missing.
 
