@@ -9,7 +9,7 @@ from pathlib import Path
 
 HOME = Path.home()
 CACHE_DIR = HOME / ".cache" / "omarchy-system-widget"
-STATIC_CACHE = CACHE_DIR / "static-v3.json"
+STATIC_CACHE = CACHE_DIR / "static-v4.json"
 NETWORK_CACHE = CACHE_DIR / "network.json"
 STATIC_TTL = 86400
 NETWORK_TTL = 15
@@ -211,23 +211,6 @@ def max_cpu_mhz():
     return None
 
 
-def thermal_status(temp, crit):
-    if temp is None:
-        return "Unknown"
-    if crit and crit > 0:
-        ratio = temp / crit
-        if ratio >= 0.85:
-            return "Hot"
-        if ratio >= 0.70:
-            return "Warm"
-        return "Normal"
-    if temp >= 80:
-        return "Hot"
-    if temp >= 65:
-        return "Warm"
-    return "Normal"
-
-
 def root_filesystem():
     for line in read_text("/proc/mounts").splitlines():
         parts = line.split()
@@ -247,7 +230,7 @@ def distribution_name():
 
 
 def short_brand(value):
-    value = compact_name(value)
+    value = compact_name((value or "").replace("_", " "))
     if not value:
         return ""
 
@@ -269,7 +252,16 @@ def short_brand(value):
     return mappings.get(first.upper(), first)
 
 
-def host_name():
+def hostnamectl_info():
+    data = run_json(["hostnamectl", "--json=short", "status"], timeout=2.0)
+    return data if isinstance(data, dict) else {}
+
+
+def host_name(hostctl=None):
+    model = compact_name((hostctl or {}).get("HardwareModel", ""))
+    if model:
+        return model
+
     for path in [
         "/sys/devices/virtual/dmi/id/product_name",
         "/sys/class/dmi/id/product_name",
@@ -280,7 +272,7 @@ def host_name():
     return compact_name(os.uname().nodename)
 
 
-def device_name():
+def device_name(hostctl=None):
     vendor = ""
     for path in [
         "/sys/devices/virtual/dmi/id/sys_vendor",
@@ -290,7 +282,10 @@ def device_name():
         if vendor:
             break
 
-    product = host_name()
+    if not vendor:
+        vendor = short_brand((hostctl or {}).get("HardwareVendor", ""))
+
+    product = host_name(hostctl)
     if vendor and product:
         if product.lower().startswith(vendor.lower()):
             return product
@@ -466,9 +461,10 @@ def static_info():
     if isinstance(cached, dict):
         return cached
 
+    hostctl = hostnamectl_info()
     result = {
-        "device": device_name(),
-        "host": host_name(),
+        "device": device_name(hostctl),
+        "host": host_name(hostctl),
         "distribution": distribution_name(),
         "kernel": os.uname().release,
         "cpu_name": cpu_name(),
@@ -490,7 +486,6 @@ def main():
     cpu_temp = round(cpu_sensor["temp"]) if cpu_sensor else None
     gpu_temp = round(gpu_sensor["temp"]) if gpu_sensor else None
     disk_temp = round(disk_sensor["temp"]) if disk_sensor else None
-    crit = cpu_sensor.get("crit") if cpu_sensor else None
 
     memory_total, memory_used = memory_info()
     disk_total, disk_used = disk_info("/")
@@ -503,8 +498,6 @@ def main():
         "temperature_c": cpu_temp,
         "temperature_text": f"{cpu_temp}°C" if cpu_temp is not None else "—",
         "temperature_source": cpu_sensor["label"] if cpu_sensor else "No sensor",
-        "thermal_status": thermal_status(cpu_temp, crit),
-        "thermal_fraction": round(min(max((cpu_temp or 0) / float(crit or 100), 0.0), 1.0), 3),
         "device": static.get("device") or static.get("host") or "—",
         "host": static.get("host") or "—",
         "distribution": static.get("distribution") or "—",
@@ -527,7 +520,7 @@ def main():
         "ip_address": network.get("ip_address") or "—",
     }
     result["summary"] = (
-        f"{result['device']} • {result['temperature_text']} {result['thermal_status'].lower()} • "
+        f"{result['device']} • {result['temperature_text']} • "
         f"CPU {result['cpu']} • "
         f"RAM {result['memory_used']} / {result['memory_total']} • "
         f"Disk {result['disk_used']} / {result['disk_total']} • "

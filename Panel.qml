@@ -14,7 +14,6 @@ Panel {
   readonly property string collectorScript: Quickshell.env("HOME") + "/.config/omarchy/plugins/jca.quick-system-info/collect.py"
   readonly property string labelText: status.label || " --"
   readonly property string temperatureText: status.temperature_text || "—"
-  readonly property string thermalStatus: String(status.thermal_status || "Unknown").toUpperCase()
   readonly property string deviceValue: status.device || status.host || "—"
   readonly property string cpuNameValue: status.cpu_name || "—"
   readonly property string cpuFrequencyValue: status.cpu || "—"
@@ -30,12 +29,6 @@ Panel {
   readonly property real openPanelIndicatorWidth: !button.vertical ? button.labelWidth : 0
   readonly property color contentForeground: bar ? bar.foreground : Color.foreground
   readonly property string contentFontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property color accentColor: {
-    var s = String(status.thermal_status || "").toLowerCase()
-    if (s === "hot") return "#ef4444"
-    if (s === "warm") return "#f59e0b"
-    return contentForeground
-  }
 
   function refresh() {
     if (!statusProc.running) statusProc.running = true
@@ -163,28 +156,6 @@ Panel {
               }
             }
 
-            Row {
-              anchors.right: parent.right
-              spacing: Style.space(8)
-
-              Rectangle {
-                width: Style.space(8)
-                height: width
-                radius: width / 2
-                color: root.accentColor
-                anchors.verticalCenter: parent.verticalCenter
-              }
-
-              Text {
-                text: root.thermalStatus
-                color: root.accentColor
-                font.family: root.contentFontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                font.letterSpacing: 1.2
-                anchors.verticalCenter: parent.verticalCenter
-              }
-            }
           }
 
           Row {
